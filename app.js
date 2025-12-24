@@ -9,6 +9,25 @@ const typeMeta = {
 
 const nodes = new Map();
 
+function ensureLinkSet(node) {
+  if (!node) return null;
+  if (!(node.links instanceof Set)) {
+    const source = node.links;
+    if (Array.isArray(source)) {
+      node.links = new Set(source);
+    } else if (source && typeof source[Symbol.iterator] === 'function') {
+      node.links = new Set([...source]);
+    } else {
+      node.links = new Set();
+    }
+  }
+  return node;
+}
+
+function createNode(payload) {
+  return ensureLinkSet({ ...payload });
+}
+
 function escapeHtml(value = '') {
   return value
     .replace(/&/g, '&amp;')
@@ -74,7 +93,7 @@ function addSampleData() {
     },
   ];
 
-  samples.forEach((node) => nodes.set(node.id, node));
+  samples.forEach((node) => nodes.set(node.id, createNode(node)));
 
   const task = samples[0];
   const project = samples[3];
@@ -367,7 +386,7 @@ function renderPanel() {
 
 function updateNode(id, nextData) {
   const node = nodes.get(id);
-  nodes.set(id, { ...node, ...nextData });
+  nodes.set(id, createNode({ ...node, ...nextData }));
 }
 
 function evaluateDropTarget(targetId) {
@@ -384,8 +403,8 @@ function evaluateDropTarget(targetId) {
 
 function validateConnection(sourceId, targetId) {
   if (sourceId === targetId) return { ok: false, reason: 'self' };
-  const source = nodes.get(sourceId);
-  const target = nodes.get(targetId);
+  const source = ensureLinkSet(nodes.get(sourceId));
+  const target = ensureLinkSet(nodes.get(targetId));
   if (!source || !target) return { ok: false, reason: 'missing' };
   if (source.links.has(targetId)) return { ok: false, reason: 'duplicate' };
 
@@ -421,8 +440,8 @@ function connectNodes(sourceId, targetId, options = {}) {
     if (!options.silent) showToast(getValidationMessage(validation.reason), 'error');
     return false;
   }
-  const source = nodes.get(sourceId);
-  const target = nodes.get(targetId);
+  const source = ensureLinkSet(nodes.get(sourceId));
+  const target = ensureLinkSet(nodes.get(targetId));
   source.links.add(targetId);
   target.links.add(sourceId);
   return true;
@@ -594,7 +613,7 @@ function handleFormSubmit(event) {
     showToast('제목을 입력해주세요.', 'error');
     return;
   }
-  nodes.set(entry.id, entry);
+  nodes.set(entry.id, createNode(entry));
   renderSections();
   closeModal();
   showToast(`${typeMeta[state.modalType].label}이(가) 추가되었습니다.`);
