@@ -1,0 +1,16 @@
+{
+  "name": "gtd-para-markdown-desktop",
+  "version": "0.1.0",
+  "description": "GTD·PARA 기반 로컬 Markdown 노트/태스크 관리 macOS 데스크톱 앱 (프로토타입)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^32.0.0"
+  }
+}
+
+

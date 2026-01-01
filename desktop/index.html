@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GTD·PARA 관계 메모 보드</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <header class="global-header">
+        <div class="brand">
+          <span class="logo">A/B</span>
+          <div class="title-group">
+            <h1>PARA Context Workbench</h1>
+            <p>할 일·노트와 프로젝트·목표·영역을 한 화면에서 연결</p>
+          </div>
+        </div>
+        <div class="utilities">
+          <label class="search">
+            <span class="material-symbol">search</span>
+            <input type="search" id="globalSearch" placeholder="노드명 검색" />
+          </label>
+          <div class="view-toggle" role="radiogroup" aria-label="뷰 선택">
+            <button data-view="board" class="active">카드</button>
+            <button data-view="timeline" disabled>타임라인</button>
+          </div>
+          <button class="tooltip-btn" id="showOnboarding">? 사용법</button>
+          <button class="primary" id="selectRootFolder">폴더 선택</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="column a-column" aria-label="실행 가능 항목">
+          <header class="column-header">
+            <div>
+              <p class="eyebrow">A 클래스</p>
+              <h2>할 일 · 노트</h2>
+            </div>
+            <div class="column-actions">
+              <button class="primary" data-open-modal="task">+ 할 일</button>
+              <button class="secondary" data-open-modal="note">+ 노트</button>
+            </div>
+          </header>
+          <div class="list-controls">
+            <div class="filter-cards" id="aTypeFilter">
+              <button class="filter-card active" data-type="task">할 일</button>
+              <button class="filter-card active" data-type="note">노트</button>
+            </div>
+            <p class="shortcut-tip">Cmd + 클릭으로 다중 선택</p>
+          </div>
+          <div class="node-list" id="aList" aria-live="polite"></div>
+        </section>
+
+        <section class="column b-column" aria-label="맥락 정보">
+          <header class="column-header">
+            <div>
+              <p class="eyebrow">B 클래스</p>
+              <h2>프로젝트 · 목표 · 영역 · 자원</h2>
+            </div>
+            <div class="column-actions">
+              <button class="secondary" data-open-modal="project">+ 프로젝트</button>
+              <button class="secondary" data-open-modal="goal">+ 목표</button>
+              <button class="secondary" data-open-modal="area">+ 영역/자원</button>
+            </div>
+          </header>
+          <div class="list-controls">
+            <div class="filter-cards" id="bLevelFilter">
+              <button class="filter-card active" data-type="project">프로젝트</button>
+              <button class="filter-card active" data-type="goal">목표</button>
+              <button class="filter-card active" data-type="area">영역</button>
+              <button class="filter-card active" data-type="resource">자원</button>
+            </div>
+          </div>
+          <div class="node-list" id="bList" aria-live="polite"></div>
+        </section>
+
+        <aside class="edit-panel" id="editPanel" aria-live="polite">
+          <header>
+            <p class="eyebrow">관계 기반 편집</p>
+            <h3 id="panelTitle">노드를 선택하세요</h3>
+            <p id="panelSubtitle">하이라이트된 노드만 편집 가능합니다.</p>
+          </header>
+          <section class="panel-body" id="panelBody">
+            <p class="empty-state">왼쪽 리스트에서 노드를 선택하면 상세 정보가 여기에 표시됩니다.</p>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <template id="nodeCardTemplate">
+      <article class="node-card" draggable="true">
+        <div class="node-meta">
+          <div class="icon"></div>
+          <div>
+            <h4 class="node-title"></h4>
+          </div>
+        </div>
+        <div class="node-extra">
+          <span class="link-count"></span>
+          <button class="ghost-btn mini" data-action="view">보기</button>
+        </div>
+      </article>
+    </template>
+
+    <div class="modal" id="nodeModal" aria-hidden="true">
+      <div class="modal-dialog" role="dialog" aria-modal="true">
+        <header>
+          <h3 id="modalTitle">노드 추가</h3>
+          <button class="ghost-btn" id="closeModal">닫기</button>
+        </header>
+        <form id="nodeForm">
+          <label>
+            제목
+            <input type="text" name="title" required placeholder="예: UX 리서치 준비" />
+          </label>
+          <label>
+            설명/메모
+            <textarea name="description" rows="3" placeholder="맥락 또는 노트"></textarea>
+          </label>
+          <label class="toggle" id="actionableGroup">
+            <input type="checkbox" name="actionable" />
+            <span>실행 가능 여부(할 일)</span>
+          </label>
+          <button class="primary" type="submit">저장</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal" id="onboardingModal" aria-hidden="true">
+      <div class="modal-dialog wide">
+        <header>
+          <h3>드래그 사용법</h3>
+          <button class="ghost-btn" data-close-onboarding>닫기</button>
+        </header>
+        <ol>
+          <li>A 섹션에서 Cmd + 클릭으로 여러 항목을 선택하세요.</li>
+          <li>선택한 카드의 드래그 핸들을 잡고 B 섹션의 카드 위로 끌면 관계가 생성됩니다.</li>
+          <li>같은 섹션 내에서도 다른 유형(할 일↔노트, 프로젝트↔목표 등)만 연결 가능합니다.</li>
+          <li>우측 패널에서 연결을 빠르게 추가하거나 해제할 수 있습니다.</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="modal" id="linkValidationModal" aria-hidden="true">
+      <div class="modal-dialog wide">
+        <header>
+          <h3>🔍 링크 검증 결과</h3>
+          <button class="ghost-btn" id="closeLinkValidation">닫기</button>
+        </header>
+        <div id="linkValidationContent"></div>
+      </div>
+    </div>
+
+    <div id="toastContainer" aria-live="assertive" class="toast-container"></div>
+
+    <script type="module" src="renderer.js"></script>
+  </body>
+</html>
