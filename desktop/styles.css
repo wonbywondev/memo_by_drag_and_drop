@@ -175,16 +175,71 @@ button.primary {
   color: #64748b;
   cursor: pointer;
   transition: all 0.2s;
+  border-left-width: 3px;
+}
+
+/* 타입별 색상 */
+.filter-card[data-type="task"] {
+  border-left-color: var(--a-task);
+}
+
+.filter-card[data-type="note"] {
+  border-left-color: var(--a-note);
+}
+
+.filter-card[data-type="project"] {
+  border-left-color: var(--b-project);
+}
+
+.filter-card[data-type="goal"] {
+  border-left-color: var(--b-goal);
+}
+
+.filter-card[data-type="area"] {
+  border-left-color: var(--b-area);
+}
+
+.filter-card[data-type="resource"] {
+  border-left-color: var(--b-resource);
 }
 
 .filter-card.active {
-  background: #0f172a;
   color: #fff;
-  border-color: #0f172a;
+}
+
+/* 활성 상태 - 타입별 배경색 */
+.filter-card.active[data-type="task"] {
+  background: var(--a-task);
+  border-color: var(--a-task);
+}
+
+.filter-card.active[data-type="note"] {
+  background: var(--a-note);
+  border-color: var(--a-note);
+}
+
+.filter-card.active[data-type="project"] {
+  background: var(--b-project);
+  border-color: var(--b-project);
+}
+
+.filter-card.active[data-type="goal"] {
+  background: var(--b-goal);
+  border-color: var(--b-goal);
+}
+
+.filter-card.active[data-type="area"] {
+  background: var(--b-area);
+  border-color: var(--b-area);
+}
+
+.filter-card.active[data-type="resource"] {
+  background: var(--b-resource);
+  border-color: var(--b-resource);
 }
 
 .filter-card:hover {
-  border-color: #0f172a;
+  opacity: 0.8;
 }
 
 .shortcut-tip {

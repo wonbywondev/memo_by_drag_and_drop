@@ -50,39 +50,60 @@ async function deleteSelectedNodes() {
   }).join(', ');
 
   // 확인 메시지
-  const confirmed = confirm(`${count}개의 노드를 삭제하시겠습니까?\n\n${nodeNames}\n\n이 작업은 파일을 완전히 삭제하며, Cmd+Z로 되돌릴 수 없습니다.`);
+  const confirmed = confirm(`${count}개의 노드를 삭제하시겠습니까?\n\n${nodeNames}\n\n이 작업은 파일을 완전히 삭제하며, 되돌릴 수 없습니다.`);
   if (!confirmed) return;
 
-  saveState(); // 삭제 전 상태 저장
-
-  const deletePromises = [];
+  const deleteFilePromises = [];
+  const updateLinkPromises = [];
   const deletedIds = [];
 
+  // 1단계: 삭제할 노드 정보 수집
   state.selectedIds.forEach(nodeId => {
     const node = nodes.get(nodeId);
     if (node && node.fullPath) {
-      // 파일 삭제
-      deletePromises.push(window.desktopApi.deleteNote(node.fullPath));
+      deleteFilePromises.push(window.desktopApi.deleteNote(node.fullPath));
       deletedIds.push(nodeId);
-
-      // 다른 노드들의 링크에서 제거
-      nodes.forEach((otherNode) => {
-        if (otherNode.links.has(nodeId)) {
-          otherNode.links.delete(nodeId);
-        }
-      });
-
-      // 메모리에서 제거
-      nodes.delete(nodeId);
     }
   });
 
   try {
-    await Promise.all(deletePromises);
+    // 2단계: 파일 삭제
+    await Promise.all(deleteFilePromises);
+
+    // 3단계: 메모리에서 제거 및 다른 노드들의 링크 업데이트
+    deletedIds.forEach(nodeId => {
+      nodes.delete(nodeId);
+    });
+
+    // 4단계: 다른 노드들의 링크에서 제거하고 파일 업데이트
+    nodes.forEach((otherNode) => {
+      let hasChanged = false;
+      deletedIds.forEach(deletedId => {
+        if (otherNode.links.has(deletedId)) {
+          otherNode.links.delete(deletedId);
+          hasChanged = true;
+        }
+      });
+
+      // 링크가 변경된 노드만 파일 업데이트
+      if (hasChanged && otherNode.fullPath) {
+        const nodeLinks = [...otherNode.links].map(id => {
+          const linkedNode = nodes.get(id);
+          return linkedNode ? linkedNode.relativePath : id;
+        });
+        updateLinkPromises.push(
+          window.desktopApi.updateNodeLinks(otherNode.fullPath, nodeLinks)
+        );
+      }
+    });
+
+    // 5단계: 연결된 노드들의 링크 저장
+    await Promise.all(updateLinkPromises);
+
     state.selectedIds.clear();
-    state.isDirty = true;
+    state.isDirty = false; // 이미 파일에 저장되었음
     renderSections();
-    showToast(`${count}개의 노드가 삭제되었습니다. Cmd+S로 저장하세요.`);
+    showToast(`${count}개의 노드가 삭제되었습니다.`);
   } catch (error) {
     showToast('삭제 중 오류가 발생했습니다.', 'error');
     console.error('Delete error:', error);
@@ -370,22 +391,36 @@ function renderPanel() {
     titleInput.focus();
     titleInput.select();
   });
+
+  let titleInputTimeout = null;
   titleInput.addEventListener('input', () => {
+    // 타이핑 중에는 저장만 하고 렌더링하지 않음
     const newTitle = titleInput.value.trim();
     if (newTitle && newTitle !== node.title) {
-      saveState();
       node.title = newTitle;
-      renderSections();
+      state.isDirty = true;
+
+      // 디바운스: 500ms 후에 카드 제목 업데이트
+      if (titleInputTimeout) clearTimeout(titleInputTimeout);
+      titleInputTimeout = setTimeout(() => {
+        const card = document.querySelector(`.node-card[data-id="${node.id}"] .node-title`);
+        if (card) card.textContent = newTitle;
+      }, 500);
     }
   });
+
   titleInput.addEventListener('blur', () => {
     const newTitle = titleInput.value.trim();
     if (newTitle && newTitle !== node.title) {
       saveState();
       node.title = newTitle;
       renderSections();
+    } else if (!newTitle) {
+      // 빈 제목은 허용하지 않음
+      titleInput.value = node.title;
     }
   });
+
   titleInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
